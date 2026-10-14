@@ -175,7 +175,7 @@ html[data-lock="1"], html[data-lock="1"] body { overflow: hidden; }
 :is(article, [data-lift], [data-stat], .confession, .fav, .first, .letter):hover > .gicon { transform: translateY(-3px) rotate(-8deg) scale(1.08); }
 
 /* ---------- navigation and footer ---------- */
-.nav { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 16px 32px; padding: 18px max(24px, calc((100vw - 1280px) / 2)); background: rgba(251, 247, 241, .92); backdrop-filter: blur(14px); border-bottom: 1px solid transparent; transition: border-color .3s; }
+.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 16px 32px; padding: 18px max(24px, calc((100vw - 1280px) / 2)); background: rgba(251, 247, 241, .92); backdrop-filter: blur(14px); border-bottom: 1px solid transparent; transition: border-color .3s; }
 .nav { border-bottom-color: #E0D6C7; }
 .nav-mivan { background: rgba(251, 247, 241, .92); }
 .brand { font-size: 17px; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }

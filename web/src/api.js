@@ -1,5 +1,13 @@
+import { demoApi } from './demo.js';
+
+/** Preview build (no server): content comes from the starting content. */
+// __DEMO__ is set at build time in vite.config.js; it is false in the normal build, so the preview code is left out.
+// eslint-disable-next-line no-undef
+export const DEMO = typeof __DEMO__ !== 'undefined' && __DEMO__ === true;
+
 /** Small fetch wrapper for the Worker API. Throws an Error with the server's message on failure. */
 export async function api(path, opts = {}) {
+  if (DEMO) return demoApi(path, opts);
   const init = { method: opts.method || (opts.body || opts.form ? 'POST' : 'GET'), headers: {}, credentials: 'same-origin' };
   if (opts.form) init.body = opts.form;
   else if (opts.body !== undefined) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opts.body); }

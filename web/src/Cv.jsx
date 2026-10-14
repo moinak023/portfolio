@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { asList, period } from './api.js';
+import { DEMO, asList, period } from './api.js';
 import { Icon, safeHref } from './ui.jsx';
 import { cvLink } from './Site.jsx';
 
@@ -17,7 +17,7 @@ export default function Cv({ site, go }) {
   const certs = ((b.certifications || {}).items || []).filter((x) => x.name);
   const edu = ((b.education || {}).items || []).filter((x) => x.degree);
   const langs = ((b.education || {}).languages || []).filter((x) => x.name);
-  const site_url = window.location.origin.replace(/^https?:\/\//, '');
+  const site_url = DEMO ? 'moinakghosh.com' : window.location.origin.replace(/^https?:\/\//, '');
   const linkedin = safeHref(p.linkedin);
   const designed = cvLink(b.cv, p.name);
 
@@ -33,7 +33,7 @@ export default function Cv({ site, go }) {
         <button type="button" className="btn btn-ghost-dark" onClick={() => go('/')}><Icon name="arrow" size={16} />Back to the portfolio</button>
         <div className="cv-bar-right">
           {designed ? <a className="btn btn-ghost-dark" href={designed} target="_blank" rel="noopener"><Icon name="download" size={16} />Designed CV (PDF)</a> : null}
-          <button type="button" className="btn btn-solid" onClick={() => window.print()}><Icon name="printer" size={16} />Save as PDF</button>
+          {DEMO ? null : <button type="button" className="btn btn-solid" onClick={() => window.print()}><Icon name="printer" size={16} />Save as PDF</button>}
         </div>
       </div>
 

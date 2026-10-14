@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api } from './api.js';
+import { api, DEMO } from './api.js';
 import { Toast } from './ui.jsx';
 import Site from './Site.jsx';
 import Cv from './Cv.jsx';
@@ -7,7 +7,10 @@ import Login from './Login.jsx';
 import Admin from './Admin.jsx';
 import { IdleGuard } from './idle.jsx';
 
-const pathNow = () => window.location.pathname.replace(/\/+$/, '') || '/';
+// In the preview build the page has no server routes, so the current page is kept in memory.
+let demoPath = '/';
+const pathNow = () => (DEMO ? demoPath : window.location.pathname.replace(/\/+$/, '') || '/');
+const pushPath = (p) => { if (DEMO) demoPath = p.split('#')[0]; else window.history.pushState({}, '', p); };
 
 export default function App() {
   const [path, setPath] = useState(pathNow());
@@ -40,8 +43,8 @@ export default function App() {
     const [p, hash] = to.split('#');
     const target = p || '/';
     const apply = () => {
-      if (target !== pathNow()) { window.history.pushState({}, '', target + (hash ? `#${hash}` : '')); setPath(target); }
-      else if (hash) window.history.replaceState({}, '', `${target}#${hash}`);
+      if (target !== pathNow()) { pushPath(target + (hash ? `#${hash}` : '')); setPath(target); }
+      else if (hash && !DEMO) window.history.replaceState({}, '', `${target}#${hash}`);
       requestAnimationFrame(() => {
         const el = hash ? document.getElementById(hash) : null;
         if (el) el.scrollIntoView(); else window.scrollTo(0, 0);
