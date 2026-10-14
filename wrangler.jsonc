@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "portfolio",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // The portfolio's address. Cloudflare creates the DNS record and the certificate for it.
+  "routes": [
+    { "pattern": "moinakghosh.com", "custom_domain": true },
+    { "pattern": "www.moinakghosh.com", "custom_domain": true }
+  ],
+  // Keep the workers.dev address until moinakghosh.com is confirmed working, then set this to false.
+  "workers_dev": true,
+  "preview_urls": false,
+
+  "assets": {
+    "directory": "./dist/",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // The Worker fills in the page title, link preview and structured data, so it answers the page addresses first.
+    "run_worker_first": ["/api/*", "/", "/cv", "/admin", "/admin/*", "/robots.txt", "/sitemap.xml"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portfolio",
+      "database_id": "8367ff83-e7ce-435f-b63f-c69dd2d103fd",
+      "migrations_dir": "./migrations"
+    }
+  ],
+
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "portfolio-files" }
+  ],
+
+  "vars": {
+    "SITE_NAME": "Moinak Ghosh",
+    // Sender of the admin password code. moinakghosh.com is already verified in Resend for the family site.
+    "MAIL_FROM": "portfolio@moinakghosh.com",
+    "MAIL_FROM_NAME": "Moinak Ghosh · Portfolio",
+    // The owner: the only person who can sign in to the admin console, and the only address password codes are sent to.
+    "OWNER_EMAIL": "moinak023@gmail.com",
+    "MAIL_REPLY_TO": "moinak023@gmail.com",
+    // Minutes without activity before the admin session ends.
+    "IDLE_MINUTES": "30",
+    // "1" shows the code on screen instead of emailing it (local development only).
+    "DEV_OTP": "0",
+    // Emails go through Resend with the RESEND_API_KEY secret.
+    "MAIL_PROVIDER": "resend"
+  }
+}

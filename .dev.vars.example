@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local development. Never deploy with DEV_OTP=1.
+DEV_OTP=1
+# RESEND_API_KEY=re_xxx

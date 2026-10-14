@@ -1,0 +1,33 @@
+{
+  "name": "portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Moinak Ghosh professional portfolio with an owner-only admin console. Cloudflare Workers + D1 + R2.",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build:web && wrangler dev",
+    "build:web": "vite build web",
+    "build": "npm run build:web",
+    "deploy": "npm run build:web && wrangler deploy",
+    "seed": "node scripts/make-seed.mjs",
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --experimental-strip-types --no-warnings --test tests/unit.test.ts",
+    "test:reset": "wrangler d1 execute DB --local --file tests/reset-local.sql && wrangler d1 execute DB --local --file migrations/0001_init.sql && wrangler d1 execute DB --local --file migrations/0002_content.sql",
+    "test:api": "node --test tests/api.test.mjs",
+    "test:e2e": "node tests/e2e.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "@vitejs/plugin-react": "^6.1.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "wrangler": "^4.148.0"
+  }
+}
