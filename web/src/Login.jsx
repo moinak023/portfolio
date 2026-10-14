@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from './api.js';
+import { api, DEMO } from './api.js';
 import { Gold, Eyebrow } from './ui.jsx';
 
 /**
@@ -86,6 +86,7 @@ export default function Login({ onDone, notice = '', go }) {
         <Eyebrow icon="lock">Welcome back</Eyebrow>
         <h2>Enter your password</h2>
         <p className="muted">Signing in as <b>{email}</b>.</p>
+        {DEMO ? <p className="login-notice" role="status"><Gold name="eye" size="sm" />This is the preview copy. Any password opens the admin console here.</p> : null}
         {pw('login-password', password, setPassword, 'Password', 'current-password')}
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="btn btn-solid btn-wide" type="submit" disabled={busy || !password}>{busy ? 'Signing you in' : 'Sign in'}</button>

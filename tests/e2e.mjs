@@ -5,6 +5,7 @@
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
+import { strToU8, zipSync } from 'fflate';
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require(process.env.PLAYWRIGHT || 'playwright');
@@ -33,6 +34,14 @@ function testPng(w, h) {
 }
 const PORTRAIT = `${SHOTS}/test-portrait.png`;
 writeFileSync(PORTRAIT, testPng(600, 860));
+const LINKEDIN_ZIP = `${SHOTS}/test-linkedin.zip`;
+writeFileSync(LINKEDIN_ZIP, zipSync({
+  'Recommendations_Received.csv': strToU8('First Name,Last Name,Company,Job Title,Text,Creation Date,Status\nE2E Asha,Rao,Example Ltd,CTO,"Clear thinker.\nGreat partner.",09/01/24,VISIBLE\nE2E Hidden,Rec,Beta,PM,Hidden on LinkedIn,01/02/20,HIDDEN\n'),
+  'Skills.csv': strToU8('Name\nE2E Skill B\nE2E Skill A\n'),
+  'Endorsement_Received_Info.csv': strToU8('Endorsement Date,Skill Name,Endorser First Name\n2024/01/01,E2E Skill A,A\n'),
+  'Certifications.csv': strToU8('Name,Url,Authority,Started On,Finished On,License Number\nE2E Certificate,,Example Board,Jan 2025,,\n'),
+  'Connections.csv': strToU8('First Name,Last Name\nNot,Imported\n'),
+}));
 const PDF = `${SHOTS}/test-cv.pdf`;
 writeFileSync(PDF, '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
 
@@ -68,6 +77,35 @@ const toastSays = async (page, re) => page.waitForFunction((src) => {
   const t = document.querySelector('.toast');
   return !!t && new RegExp(src, 'i').test(t.textContent || '');
 }, re.source, { timeout: 8000 }).then(() => true).catch(() => false);
+/** Remove and restore buttons ask for a second click before they act. */
+async function twice(target) {
+  await target.click();
+  await target.click();
+}
+/** Drags one row by its handle onto another, with a mouse (desktop) or a finger (phone). */
+async function dragRow(page, cdp, fromId, toId) {
+  const grip = page.locator(`[data-section="${fromId}"] [data-grip]`);
+  await page.locator(`[data-section="${toId}"]`).scrollIntoViewIfNeeded();
+  await grip.scrollIntoViewIfNeeded();
+  const a = await grip.boundingBox();
+  const b = await page.locator(`[data-section="${toId}"] [data-grip]`).boundingBox();
+  const ax = a.x + a.width / 2; const ay = a.y + a.height / 2; const by = b.y + b.height / 2 - 8;
+  if (cdp) {
+    const touch = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: ax, y }] });
+    await touch('touchStart', ay);
+    for (let i = 1; i <= 24; i += 1) { await touch('touchMove', ay + ((by - ay) * i) / 24); await page.waitForTimeout(16); }
+    await page.waitForTimeout(150);
+    await touch('touchEnd');
+  } else {
+    await page.mouse.move(ax, ay);
+    await page.mouse.down();
+    await page.mouse.move(ax, ay - 10, { steps: 4 });
+    await page.mouse.move(ax, by, { steps: 24 });
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+  }
+}
+const orderOf = (b) => b.layout.sections.map((x) => x.id);
 const publicSite = async (page) => page.evaluate(async () => (await (await fetch('/api/site')).json()).blocks);
 /** Polls the public site until the condition holds (saves are quick, but the check must not race them). */
 const siteSoon = async (page, fn, ms = 6000) => {
@@ -103,7 +141,6 @@ async function run(kind) {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/401|Failed to load resource/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
-  page.on('dialog', (d) => d.accept());
   const P = (s) => `${kind}: ${s}`;
 
   // ---------- public portfolio ----------
@@ -194,15 +231,15 @@ async function run(kind) {
   await page.waitForSelector('.a-drawer');
   const dw = await page.$eval('.a-drawer', (d) => d.getBoundingClientRect().width);
   check(kind === 'phone' ? Math.abs(dw - (await page.evaluate(() => innerWidth))) < 2 : dw > 400, P('edit panel opens at the right width'));
-  await page.fill('.a-drawer #f-title', `E2E agent ${kind}`);
-  await page.fill('.a-drawer #f-tagline', 'A test entry.');
-  await page.fill('.a-drawer #f-status', 'Proof of concept');
-  await page.fill('.a-drawer #f-highlights', 'First point\nSecond point');
-  await page.fill('.a-drawer #f-stack', 'One, Two');
-  await page.fill('.a-drawer #f-link', 'http://not-https.example');
+  await page.fill('#d-title', `E2E agent ${kind}`);
+  await page.fill('#d-tagline', 'A test entry.');
+  await page.fill('#d-status', 'Proof of concept');
+  await page.fill('#d-highlights', 'First point\nSecond point');
+  await page.fill('#d-stack', 'One, Two');
+  await page.fill('#d-link', 'http://not-https.example');
   await page.click('.a-drawer footer .a-btn-solid');
   check(await toastSays(page, /https/), P('a link that is not https is refused'));
-  await page.fill('.a-drawer #f-link', 'https://example.com/demo');
+  await page.fill('#d-link', 'https://example.com/demo');
   await shot(page, `${kind}-admin-drawer`);
   await page.click('.a-drawer footer .a-btn-solid');
   await page.waitForSelector('.a-drawer', { state: 'detached' });
@@ -217,34 +254,165 @@ async function run(kind) {
   await shot(page, `${kind}-admin-agentic`);
   await (await (await page.$$('[data-list="items"] [data-row]'))[order.length - 2].$('.a-row-open')).click();
   await page.waitForSelector('.a-drawer');
-  await page.click('.a-drawer footer .a-btn-danger');
+  await twice(page.locator('.a-drawer footer .a-btn-danger'));
   await page.waitForSelector('.a-drawer', { state: 'detached' });
   check(!(await publicSite(page)).agentic.items.some((x) => x.title === `E2E agent ${kind}`), P('removed project is gone from the site'));
 
   // Earlier versions: put the removed project back, then remove it again by restoring
   await page.click('.a-versions .a-toolbar .a-btn');
   await page.waitForSelector('.a-versions .a-row');
-  await (await page.$$('.a-versions .a-row .a-btn'))[0].click();
+  await twice(page.locator('.a-versions .a-row .a-btn').first());
   check(await toastSays(page, /earlier version/i), P('restoring an earlier version works'));
   check(await siteSoon(page, (b) => b.agentic.items.some((x) => x.title === `E2E agent ${kind}`)), P('restored version is on the site'));
   await page.waitForTimeout(400);
-  await (await page.$$('.a-versions .a-row .a-btn'))[0].click();
+  await twice(page.locator('.a-versions .a-row .a-btn').first());
   check(await siteSoon(page, (b) => !b.agentic.items.some((x) => x.title === `E2E agent ${kind}`)), P('restoring again undoes the restore'));
 
   // Recommendations: a hidden one never reaches visitors
   await page.goto(`${BASE}/admin/recommendations`, { waitUntil: 'networkidle' });
   await page.click('[data-list="items"] .a-toolbar .a-btn-solid');
-  await page.fill('.a-drawer #f-name', 'E2E Hidden');
-  await page.fill('.a-drawer #f-text', 'Not for visitors.');
-  await page.uncheck('.a-drawer #f-visible');
+  await page.fill('#d-name', 'E2E Hidden');
+  await page.fill('#d-text', 'Not for visitors.');
+  await page.uncheck('#d-visible');
   await page.click('.a-drawer footer .a-btn-solid');
   await page.waitForSelector('.a-drawer', { state: 'detached' });
   check(!(await publicSite(page)).recommendations.items.some((x) => x.name === 'E2E Hidden'), P('hidden recommendation stays private'));
   check(!!(await page.$('.a-badges i[data-st="off"]')), P('admin marks it as Hidden'));
   const recRows = await page.$$('[data-list="items"] [data-row]');
   await (await recRows[recRows.length - 1].$('.a-row-open')).click();
-  await page.click('.a-drawer footer .a-btn-danger');
+  await twice(page.locator('.a-drawer footer .a-btn-danger'));
   await page.waitForSelector('.a-drawer', { state: 'detached' });
+
+  // A new recommendation added by hand appears in the same style as the others
+  await page.click('[data-list="items"] .a-toolbar .a-btn-solid');
+  await page.fill('#d-name', `E2E Colleague ${kind}`);
+  await page.fill('#d-role', 'Chief Technology Officer, Example Ltd');
+  await page.fill('#d-text', 'A thoughtful architect.');
+  await page.click('.a-drawer footer .a-btn-solid');
+  await page.waitForSelector('.a-drawer', { state: 'detached' });
+  await page.goto(`${BASE}/#recommendations`, { waitUntil: 'networkidle' });
+  const newRec = page.locator('#recommendations figure.rec', { hasText: `E2E Colleague ${kind}` });
+  check(await newRec.count() === 1 && (await newRec.locator('figcaption small').first().textContent()).includes('Example Ltd'), P('a recommendation added by hand shows on the site like the others'));
+  await page.goto(`${BASE}/admin/recommendations`, { waitUntil: 'networkidle' });
+  await page.locator('[data-list="items"] [data-row]', { hasText: `E2E Colleague ${kind}` }).locator('.a-row-open').click();
+  await twice(page.locator('.a-drawer footer .a-btn-danger'));
+  await page.waitForSelector('.a-drawer', { state: 'detached' });
+
+  // ---------- page builder ----------
+  const start = await page.evaluate(async () => (await (await fetch('/api/admin/blocks')).json()).blocks);
+  await page.goto(`${BASE}/admin/builder`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('[data-section]');
+  check((await page.$$('[data-section]')).length === 10, P('builder lists the ten sections in page order'));
+  if (kind === 'desktop') {
+    const frame = await page.waitForSelector('iframe[title="Live preview of the portfolio"]');
+    const inner = await frame.contentFrame();
+    check(!!(await inner.waitForSelector('.hero-band h1', { timeout: 10000 }).catch(() => null)), P('live preview shows the portfolio beside the builder'));
+    check((await page.$$('.a-nav-group')).length === 2, P('sidebar lists the page sections as their own group'));
+  }
+  await shot(page, `${kind}-admin-builder`);
+  // drag a section to a new place
+  const cdp = kind === 'phone' ? await page.context().newCDPSession(page) : null;
+  const [mover, target] = kind === 'phone' ? ['principles', 'agentic'] : ['skills', 'agentic'];
+  await dragRow(page, cdp, mover, target);
+  check(await siteSoon(page, (b) => orderOf(b).indexOf(mover) === orderOf(b).indexOf(target) - 1), P(`dragging ${mover} above ${target} changes the page order`));
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  const ids = await page.$$eval('main > section[id]', (els) => els.map((e) => e.id));
+  check(ids.indexOf(mover) === ids.indexOf(target) - 1, P('the portfolio shows the new order'));
+  // keyboard: focus the handle and press the arrow keys
+  await page.goto(`${BASE}/admin/builder`, { waitUntil: 'networkidle' });
+  await page.focus(`[data-section="${mover}"] [data-grip]`);
+  await page.keyboard.press('ArrowDown');
+  check(await siteSoon(page, (b) => orderOf(b).indexOf(mover) === orderOf(b).indexOf(target) + 1), P('the down arrow key moves a section one place down'));
+  check(await page.evaluate((m) => document.activeElement === document.querySelector(`[data-section="${m}"] [data-grip]`), mover), P('the handle keeps the keyboard focus after a move'));
+  await page.keyboard.press('ArrowUp');
+  check(await siteSoon(page, (b) => orderOf(b).indexOf(mover) === orderOf(b).indexOf(target) - 1), P('the up arrow key moves it back up'));
+  // hide and show a section
+  await page.click('[data-section="principles"] [data-toggle-visible]');
+  check(await siteSoon(page, (b) => b.layout.sections.find((x) => x.id === 'principles').visible === false), P('the eye button hides a section'));
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  check(!(await page.$('#principles')), P('a hidden section is not on the portfolio'));
+  await page.goto(`${BASE}/admin/builder`, { waitUntil: 'networkidle' });
+  check(!!(await page.$('[data-section="principles"].a-sec-hidden')), P('the builder marks it as hidden'));
+  await page.click('[data-section="principles"] [data-toggle-visible]');
+  check(await siteSoon(page, (b) => b.layout.sections.find((x) => x.id === 'principles').visible !== false), P('the eye button shows it again'));
+  // add a section of my own with sub-sections
+  await page.click('[data-add-section]');
+  await page.waitForSelector('.a-templates');
+  await shot(page, `${kind}-admin-add-section`);
+  await page.click('[data-template="cards"]');
+  await page.waitForURL(/\/admin\/c-[a-z0-9]+$/);
+  const cid = page.url().split('/').pop();
+  await page.waitForSelector('#f-title');
+  await page.fill('#f-title', `E2E section ${kind}`);
+  await page.fill('#f-intro', 'Made by the browser test.');
+  await page.click('.a-savebar button[type=submit]');
+  check(await toastSays(page, /Saved/), P('a new section saves'));
+  await page.click('#sec-menu');
+  check(await toastSays(page, /top menu/), P('the new section can be added to the top menu'));
+  await page.click('[data-list="items"] .a-toolbar .a-btn-solid');
+  await page.fill('#d-title', 'E2E card');
+  await page.fill('#d-text', 'First line.\nSecond line.');
+  await page.fill('#d-points', 'Point one\nPoint two');
+  await page.click('.a-drawer footer .a-btn-solid');
+  await page.waitForSelector('.a-drawer', { state: 'detached' });
+  check(await siteSoon(page, (b) => { const s = b.layout.sections.find((x) => x.id === cid); return !!s && s.items.length === 3 && s.items[2].points.length === 2; }), P('a sub-section is added to the new section'));
+  await shot(page, `${kind}-admin-custom`);
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await scrollThrough(page);
+  check((await page.$$(`#${cid} .cs-card`)).length === 3, P('the new section shows its three cards on the portfolio'));
+  check(((await page.textContent(`#${cid} h2`)) || '').includes(`E2E section ${kind}`), P('the new section has its title'));
+  if (kind === 'phone') {
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.click('.burger');
+    await page.waitForSelector('.sheet');
+    const item = page.locator('.sheet-item', { hasText: `E2E section ${kind}` });
+    check(await item.count() === 1, P('the new section is in the menu'));
+    await item.click();
+    await page.waitForTimeout(800);
+  } else {
+    check(!!(await page.$(`.nav-links a[href="/#${cid}"]`)), P('the new section is in the top menu'));
+  }
+  await page.locator(`#${cid}`).scrollIntoViewIfNeeded();
+  await page.waitForTimeout(700);
+  await shot(page, `${kind}-site-custom`);
+  // change the template without losing the content
+  await page.goto(`${BASE}/admin/${cid}`, { waitUntil: 'networkidle' });
+  await page.selectOption('#f-template', 'timeline');
+  await page.selectOption('#f-style', 'dark');
+  await page.click('.a-savebar button[type=submit]');
+  check(await toastSays(page, /Saved/), P('the template can be changed'));
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await scrollThrough(page);
+  check((await page.$$(`#${cid}.cs-dark .cs-timeline > li`)).length === 3, P('the same sub-sections now show as a dark timeline'));
+  await page.locator(`#${cid}`).scrollIntoViewIfNeeded();
+  await page.waitForTimeout(700);
+  await shot(page, `${kind}-site-custom-timeline`);
+  await noSideScroll(page, P('portfolio with a section of my own'));
+  // delete it from the builder
+  await page.goto(`${BASE}/admin/builder`, { waitUntil: 'networkidle' });
+  await twice(page.locator(`[data-section="${cid}"] .a-icon-danger`));
+  check(await siteSoon(page, (b) => !b.layout.sections.some((x) => x.id === cid)), P('a section of my own can be deleted'));
+
+  // ---------- LinkedIn import ----------
+  await page.goto(`${BASE}/admin/linkedin`, { waitUntil: 'networkidle' });
+  await page.setInputFiles('#li-file', LINKEDIN_ZIP);
+  await page.waitForSelector('[data-import="recommendations"] .a-pick');
+  check((await page.$$('[data-import="recommendations"] .a-pick')).length === 2, P('the LinkedIn file shows both recommendations'));
+  check((await page.$$('[data-import="skills"] .a-chip-pick')).length === 2 && (await page.$$('[data-import="certifications"] .a-pick')).length === 1, P('and its skills and certification'));
+  await shot(page, `${kind}-admin-linkedin`);
+  await page.click('[data-import-go]');
+  check(await toastSays(page, /Imported 2 recommendations, 2 skills, 1 certification/), P('import adds what was picked'));
+  const after = await publicSite(page);
+  check(after.recommendations.items.some((x) => x.name === 'E2E Asha Rao' && x.date === 'September 2024') && !after.recommendations.items.some((x) => x.name === 'E2E Hidden Rec'), P('imported recommendation is shown, the one hidden on LinkedIn stays hidden'));
+  check(after.skills.groups.some((g) => g.name === 'From LinkedIn' && g.items.join('|') === 'E2E Skill A|E2E Skill B'), P('imported skills are in a From LinkedIn group, most endorsed first'));
+  check(after.certifications.items.some((x) => x.name === 'E2E Certificate' && x.year === '2025'), P('imported certification is listed'));
+  await page.setInputFiles('#li-file', LINKEDIN_ZIP);
+  await page.waitForSelector('[data-import="recommendations"] .a-pick');
+  check((await page.$$('.a-pick-have, .a-chip-pick.a-pick-have')).length === 5 && await page.isDisabled('[data-import-go]'), P('importing the same file again adds nothing twice'));
+  // put everything back as it was before the builder and import tests
+  await page.evaluate(async (snap) => {
+    for (const k of ['layout', 'recommendations', 'skills', 'certifications']) await fetch(`/api/admin/blocks/${k}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snap[k]) });
+  }, start);
 
   // CV file: upload a PDF, the site's Download CV button gives it, then remove it
   await page.goto(`${BASE}/admin/cv`, { waitUntil: 'networkidle' });

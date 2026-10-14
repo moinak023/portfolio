@@ -6,9 +6,10 @@ type Any = Record<string, any>;
 
 /** Security headers for the HTML pages the Worker serves (the _headers file only covers static files). */
 export function pageHeaders(h: Headers, { noindex = false, isAdmin = false } = {}) {
-  h.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+  h.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'");
   h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  h.set('X-Frame-Options', 'DENY');
+  // The admin's live preview shows the site in a frame on this same site; no other site may frame it.
+  h.set('X-Frame-Options', 'SAMEORIGIN');
   h.set('X-Content-Type-Options', 'nosniff');
   h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');

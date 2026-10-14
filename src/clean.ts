@@ -3,7 +3,7 @@
 export const MAX_STRING = 20000;
 export const MAX_LIST = 120;
 export const MAX_KEYS = 80;
-export const MAX_DEPTH = 6;
+export const MAX_DEPTH = 8;
 
 /**
  * Cleans a JSON value an administrator sent: trims strings, caps sizes, keeps only plain values.

@@ -36,7 +36,8 @@ const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 
 test('the public site loads without signing in, with every section', async () => {
   const r = await anon('/api/site');
   assert.equal(r.status, 200);
-  for (const k of ['profile', 'stats', 'agentic', 'work', 'experience', 'skills', 'certifications', 'recommendations', 'education', 'contact', 'seo', 'cv']) assert.ok(r.data.blocks[k], k);
+  for (const k of ['profile', 'stats', 'agentic', 'work', 'experience', 'skills', 'certifications', 'recommendations', 'education', 'contact', 'seo', 'cv', 'layout']) assert.ok(r.data.blocks[k], k);
+  assert.equal(r.data.blocks.layout.sections.length, 10);
   assert.equal(r.data.blocks.profile.name, 'Moinak Ghosh');
   startBlocks = r.data.blocks;
 });
@@ -48,7 +49,9 @@ test('pages carry the title, description, link preview and structured data', asy
   assert.match(r.data, /property="og:image" content="[^"]+\/og\.png"/);
   assert.match(r.data, /"@type":"Person"/);
   assert.match(r.data, /<meta name="robots" content="index, follow"/);
-  assert.match(r.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
+  // Only the site itself may frame its pages (the admin's live preview); nobody else can.
+  assert.match(r.headers.get('content-security-policy') || '', /frame-ancestors 'self'/);
+  assert.equal(r.headers.get('x-frame-options'), 'SAMEORIGIN');
   const cv = await anon('/cv');
   assert.match(cv.data, /<title>CV · Moinak Ghosh<\/title>/);
   const adm = await anon('/admin');
@@ -130,6 +133,21 @@ test('bad saves are refused with a plain message', async () => {
   assert.match(badKey.data.error, /field name/);
   const huge = await owner('/api/admin/blocks/contact', { method: 'PUT', body: Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`k${i}`, 'x'.repeat(19000)])) });
   assert.equal(huge.status, 413);
+});
+
+test('the page layout saves a new section with sub-sections, and an earlier order can be restored', async () => {
+  const layout = (await owner('/api/admin/blocks')).data.blocks.layout;
+  const custom = { id: 'c-apitest', type: 'custom', template: 'timeline', style: 'dark', visible: true, menu: true, label: 'Story', title: 'My story', items: [{ id: 'c-apitest-1', label: '2026', title: 'Started', text: 'Line one\nLine two', points: ['a', 'b'] }] };
+  const next = { ...layout, sections: [custom, ...layout.sections.slice().reverse()] };
+  const r = await owner('/api/admin/blocks/layout', { method: 'PUT', body: next });
+  assert.equal(r.status, 200);
+  const pub = (await anon('/api/site')).data.blocks.layout.sections;
+  assert.equal(pub[0].id, 'c-apitest');
+  assert.deepEqual(pub[0].items[0].points, ['a', 'b']);
+  assert.equal(pub[1].id, 'contact');
+  const hist = await owner('/api/admin/history/layout');
+  await owner(`/api/admin/history/${hist.data.versions[0].id}/restore`, { method: 'POST' });
+  assert.deepEqual((await anon('/api/site')).data.blocks.layout, layout);
 });
 
 test('hidden recommendations never reach visitors', async () => {

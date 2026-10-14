@@ -9,19 +9,12 @@ export const STATUS_IDEAS = ['Live', 'In use', 'Working prototype', 'Working ski
 
 const ICON_HELP = 'The small golden badge shown beside this entry.';
 
+/** Pages of the admin that are not sections of the portfolio. Sections are listed from the page layout. */
 export const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-  { id: 'profile', label: 'Profile and opening', icon: 'user' },
-  { id: 'stats', label: 'Numbers band', icon: 'chart' },
-  { id: 'agentic', label: 'Agentic AI', icon: 'bot' },
-  { id: 'principles', label: 'How I work', icon: 'target' },
-  { id: 'work', label: 'Architecture', icon: 'hub' },
-  { id: 'experience', label: 'Experience', icon: 'briefcase' },
-  { id: 'skills', label: 'Skills', icon: 'spark' },
-  { id: 'certifications', label: 'Certifications', icon: 'award' },
-  { id: 'education', label: 'Education and languages', icon: 'grad' },
-  { id: 'recommendations', label: 'Recommendations', icon: 'quote' },
-  { id: 'contact', label: 'Contact', icon: 'mail' },
+  { id: 'builder', label: 'Page builder', icon: 'layers' },
+  { id: 'profile', label: 'Opening and profile', icon: 'user' },
+  { id: 'linkedin', label: 'Import from LinkedIn', icon: 'upload' },
   { id: 'cv', label: 'CV file', icon: 'doc' },
   { id: 'seo', label: 'Search and sharing', icon: 'globe' },
   { id: 'account', label: 'My password', icon: 'lock' },
@@ -49,8 +42,14 @@ export const SPECS = {
       T('phone', 'Phone number (optional)'),
       { key: 'show_phone', label: 'Show the phone number on the site and CV', type: 'toggle', default: false },
       L('open_to', 'What you are open to', { rows: 2 }),
+    ],
+  },
+  counter: {
+    block: 'profile',
+    intro: 'The teal band that counts the years, days, hours, minutes and seconds since your career started.',
+    fields: [
       { group: 'Live counter' },
-      { key: 'career_start', label: 'Career start date', type: 'date', help: 'The counter shows the years, days, hours, minutes and seconds since this date.' },
+      { key: 'career_start', label: 'Career start date', type: 'date', help: 'The counter shows the time since this date.' },
       T('counter_title', 'Counter title'),
       L('counter_text', 'Text beside the counter', { rows: 3 }),
     ],
@@ -222,7 +221,35 @@ export function problem(fields, vals) {
     const v = typeof vals[f.key] === 'string' ? vals[f.key].trim() : '';
     if (!v) continue;
     if (f.type === 'url' && !/^https:\/\/[^\s<>"]+$/i.test(v)) return `${f.label}: use a full address that starts with https://`;
+    if (f.type === 'link' && !/^(https:\/\/[^\s<>"]+|mailto:[^\s<>"@]+@[^\s<>"]+)$/i.test(v)) return `${f.label}: use a full address that starts with https://, or mailto: followed by an email address.`;
     if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return `${f.label}: enter a valid email address.`;
   }
   return '';
+}
+
+/** Settings of a section added in the page builder. */
+export const CUSTOM_FIELDS = (templates, styles) => [
+  { group: 'What this section looks like' },
+  { key: 'template', label: 'Template', type: 'select', options: Object.entries(templates).map(([k, t]) => [k, `${t.name}: ${t.about}`]) },
+  { key: 'style', label: 'Background', type: 'select', options: styles },
+  { group: 'Section text' },
+  T('eyebrow', 'Small label above the title'),
+  { key: 'icon', label: 'Icon beside the small label', type: 'icon', help: ICON_HELP },
+  T('title', 'Section title'),
+  L('intro', 'Introduction', { rows: 4 }),
+  { key: 'image_key', label: 'Image beside the text (Text template only)', type: 'photo', folder: 'sections' },
+];
+
+/** Sub-section fields for a template, labelled for what that template does with them. */
+export function itemFields(template) {
+  const types = { title: 'text', label: 'text', text: 'long', points: 'lines', tags: 'tags', icon: 'icon', image_key: 'photo', link: 'link', link_label: 'text' };
+  return Object.entries(template.fields).map(([key, label]) => {
+    const f = { key, label, type: types[key] };
+    if (key === 'text') f.rows = 6;
+    if (key === 'points') f.rows = 5;
+    if (key === 'image_key') f.folder = 'sections';
+    if (key === 'link') f.placeholder = 'https://...';
+    if (key === 'icon') f.help = ICON_HELP;
+    return f;
+  });
 }

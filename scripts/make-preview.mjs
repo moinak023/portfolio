@@ -1,4 +1,4 @@
-// Builds one self-contained HTML preview of the public portfolio (no server, starting content only):
+// Builds one self-contained HTML preview of the portfolio and its admin console (no server; changes live in memory only):
 // VITE_DEMO=1 npx vite build web && node scripts/make-preview.mjs  ->  preview/portfolio-preview.html
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
@@ -9,8 +9,10 @@ const js = /src="\/(assets\/[^"]+\.js)"/.exec(html)[1];
 let style = readFileSync(new URL(`dist-demo/${css}`, root), 'utf8');
 style = style.replace(/url\("?\/fonts\/([a-z0-9-]+\.woff2)"?\)/g, (_, f) => `url(data:font/woff2;base64,${readFileSync(new URL(`web/public/fonts/${f}`, root)).toString('base64')})`);
 const script = readFileSync(new URL(`dist-demo/${js}`, root), 'utf8').replace(/<\/script/gi, '<\\/script');
-const out = `<title>Moinak Ghosh Portfolio</title>
-<meta name="description" content="Preview of the portfolio with its starting content.">
+const out = `<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moinak Ghosh Portfolio</title>
+<meta name="description" content="Preview of the portfolio and its admin console. Changes are kept only until the page is reloaded.">
 <style>${style}</style>
 <div id="root"></div>
 <script type="module">${script}</script>

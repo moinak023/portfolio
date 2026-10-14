@@ -14,7 +14,7 @@
     "migrate:remote": "wrangler d1 migrations apply DB --remote",
     "typecheck": "tsc --noEmit",
     "test:unit": "node --experimental-strip-types --no-warnings --test tests/unit.test.ts",
-    "test:reset": "wrangler d1 execute DB --local --file tests/reset-local.sql && wrangler d1 execute DB --local --file migrations/0001_init.sql && wrangler d1 execute DB --local --file migrations/0002_content.sql",
+    "test:reset": "wrangler d1 execute DB --local --file tests/reset-local.sql && wrangler d1 execute DB --local --file migrations/0001_init.sql && wrangler d1 execute DB --local --file migrations/0002_content.sql && wrangler d1 execute DB --local --file migrations/0003_layout.sql",
     "test:api": "node --test tests/api.test.mjs",
     "test:e2e": "node tests/e2e.mjs"
   },
@@ -23,7 +23,11 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261008.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@vitejs/plugin-react": "^6.1.2",
+    "fflate": "^0.8.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "typescript": "^7.0.2",

@@ -333,4 +333,21 @@ export const content = {
   },
 
   cv: { file_key: '', file_name: '', uploaded_at: '' },
+
+  // The order of the page, edited in Admin → Page builder. The opening always comes first and the footer last.
+  // Built-in sections keep their content in their own section above; custom sections carry their content here.
+  layout: {
+    sections: [
+      { id: 'stats', type: 'stats', visible: true, menu: false, label: 'In numbers' },
+      { id: 'agentic', type: 'agentic', visible: true, menu: true, label: 'Agentic AI' },
+      { id: 'principles', type: 'principles', visible: true, menu: false, label: 'How I work' },
+      { id: 'work', type: 'work', visible: true, menu: true, label: 'Architecture' },
+      { id: 'counter', type: 'counter', visible: true, menu: false, label: 'Live counter' },
+      { id: 'experience', type: 'experience', visible: true, menu: true, label: 'Experience' },
+      { id: 'skills', type: 'skills', visible: true, menu: true, label: 'Skills' },
+      { id: 'certifications', type: 'certifications', visible: true, menu: false, label: 'Certifications' },
+      { id: 'recommendations', type: 'recommendations', visible: true, menu: true, label: 'Recommendations' },
+      { id: 'contact', type: 'contact', visible: true, menu: true, label: 'Contact' },
+    ],
+  },
 };

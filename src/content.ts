@@ -9,7 +9,7 @@ type App = Hono<{ Bindings: Env; Variables: Vars }>;
 /** Every editable part of the portfolio. Each one is stored as one JSON document. */
 export const BLOCK_KEYS = [
   'profile', 'stats', 'principles', 'agentic', 'work', 'experience', 'skills',
-  'certifications', 'recommendations', 'education', 'contact', 'seo', 'cv',
+  'certifications', 'recommendations', 'education', 'contact', 'seo', 'cv', 'layout',
 ] as const;
 export type BlockKey = (typeof BLOCK_KEYS)[number];
 const isBlockKey = (k: string): k is BlockKey => (BLOCK_KEYS as readonly string[]).includes(k);

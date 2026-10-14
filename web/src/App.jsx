@@ -1,11 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { api, DEMO } from './api.js';
 import { Toast } from './ui.jsx';
 import Site from './Site.jsx';
 import Cv from './Cv.jsx';
-import Login from './Login.jsx';
-import Admin from './Admin.jsx';
 import { IdleGuard } from './idle.jsx';
+
+// The sign-in page and the admin console are only for the owner, so visitors never download them.
+const Login = lazy(() => import('./Login.jsx'));
+const Admin = lazy(() => import('./Admin.jsx'));
+const Busy = () => <div className="boot" aria-busy="true"><span>Admin</span></div>;
 
 // In the preview build the page has no server routes, so the current page is kept in memory.
 let demoPath = '/';
@@ -80,14 +83,14 @@ export default function App() {
   }, []);
 
   if (isAdminPath) {
-    if (me === undefined) return <div className="boot" aria-busy="true"><span>Admin</span></div>;
-    if (!me) return <Login onDone={async () => { setNotice(''); await loadMe(); }} notice={notice} go={go} />;
+    if (me === undefined) return <Busy />;
+    if (!me) return <Suspense fallback={<Busy />}><Login onDone={async () => { setNotice(''); await loadMe(); }} notice={notice} go={go} /></Suspense>;
     return (
-      <>
+      <Suspense fallback={<Busy />}>
         <Admin me={me} go={go} say={say} signOut={signOut} section={path.split('/')[2] || 'dashboard'} reloadSite={loadSite} />
         <Toast toast={toast} />
         <IdleGuard minutes={idleMinutes} onTimeout={signOut} />
-      </>
+      </Suspense>
     );
   }
 

@@ -7,6 +7,7 @@ export default defineConfig({
   root: import.meta.dirname,
   plugins: [react()],
   define: { __DEMO__: JSON.stringify(demo) },
-  build: { outDir: demo ? '../dist-demo' : '../dist', emptyOutDir: true },
+  // The preview copy is one self-contained file, so it keeps all code in a single script.
+  build: { outDir: demo ? '../dist-demo' : '../dist', emptyOutDir: true, rollupOptions: demo ? { output: { inlineDynamicImports: true } } : {} },
   server: { proxy: { '/api': 'http://localhost:8787' } },
 });

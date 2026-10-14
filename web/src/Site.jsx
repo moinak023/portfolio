@@ -2,15 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { asList, fileUrl, period, since } from './api.js';
 import { CountUp, Eyebrow, Gold, Icon, Photo, Words, initials, safeHref, useReveal } from './ui.jsx';
 import { SiteNav, SiteFooter } from './Chrome.jsx';
+import { menuLinks, sectionsOf } from './sections.js';
 
-const LINKS = [
-  { to: '/#agentic', label: 'Agentic AI' },
-  { to: '/#work', label: 'Architecture' },
-  { to: '/#experience', label: 'Experience' },
-  { to: '/#skills', label: 'Skills' },
-  { to: '/#recommendations', label: 'Recommendations' },
-  { to: '/#contact', label: 'Contact' },
-];
 
 const statusTone = (s) => {
   const v = String(s || '').toLowerCase();
@@ -73,7 +66,7 @@ function Stats({ s }) {
   const items = (s.items || []).filter((x) => x.value || x.label);
   if (!items.length) return null;
   return (
-    <section className="band band-ink band-bright">
+    <section id="stats" className="band band-ink band-bright">
       <div className="wrap">
         <Eyebrow icon="chart" light data-rise="">{s.eyebrow}</Eyebrow>
         <h2 className="h2" data-rise="">{s.title}</h2>
@@ -161,7 +154,7 @@ function Principles({ pr }) {
   const items = (pr.items || []).filter((x) => x.title);
   if (!items.length) return null;
   return (
-    <section className="band band-alt">
+    <section id="principles" className="band band-alt">
       <div className="wrap section">
         <div className="section-head" data-rise="">
           <Eyebrow icon="target">{pr.eyebrow}</Eyebrow>
@@ -219,7 +212,7 @@ function Counter({ p }) {
   if (!t) return null;
   const cells = [['years', t.years], ['days', t.days], ['hours', t.hours], ['minutes', t.minutes], ['seconds', t.seconds]];
   return (
-    <section className="counter">
+    <section id="counter" className="counter">
       <div className="wrap counter-in">
         <div>
           <Eyebrow icon="clock" light>{p.counter_title}</Eyebrow>
@@ -381,6 +374,152 @@ function Contact({ c, p, cvHref, go }) {
   );
 }
 
+/* ---------- sections added in the page builder ---------- */
+
+function Head({ s, light }) {
+  if (!s.eyebrow && !s.title && !s.intro) return null;
+  return (
+    <div className="section-head" data-rise="">
+      {s.eyebrow ? <Eyebrow icon={s.icon || 'star'} light={light}>{s.eyebrow}</Eyebrow> : null}
+      {s.title ? <h2 className="h2" data-mask="">{s.title}</h2> : null}
+      {s.intro ? <p className={`${light ? 'on-dark-muted' : 'muted'} lead-wide`}>{s.intro}</p> : null}
+    </div>
+  );
+}
+
+function ItemLink({ x, light }) {
+  const href = safeHref(x.link);
+  if (!href) return null;
+  return <a className={`proj-link${light ? ' on-dark-link' : ''}`} href={href} target={/^https:/.test(href) ? '_blank' : undefined} rel="noopener">{x.link_label || 'Open'}<Icon name="external" size={14} /></a>;
+}
+
+function Points({ list }) {
+  const items = asList(list);
+  if (!items.length) return null;
+  return <ul className="ticks">{items.map((h) => <li key={h}><Icon name="check" size={16} /><span>{h}</span></li>)}</ul>;
+}
+
+/** A section made in the page builder: cards, text, timeline, numbers, quotes or a call to action. */
+export function CustomSection({ s }) {
+  const items = (s.items || []).filter((x) => x && (x.title || x.text || x.label));
+  const dark = s.style === 'dark';
+  const tone = dark ? 'band band-ink cs-dark' : s.style === 'cream' ? 'band band-alt' : '';
+  const t = s.template || 'cards';
+  let body = null;
+  if (t === 'cards') {
+    body = (
+      <div className="cs-cards">
+        {items.map((x, i) => (
+          <article key={x.id || i} className="cs-card" data-rise="" data-lift="" style={{ '--d': i % 3 }}>
+            <header className="proj-head">{x.icon ? <Gold name={x.icon} /> : null}{x.label ? <span className="status" data-tone="built"><i aria-hidden="true" />{x.label}</span> : null}</header>
+            {x.title ? <h3>{x.title}</h3> : null}
+            {x.text ? <p className="muted cs-text">{x.text}</p> : null}
+            {x.image_key ? <Photo k={x.image_key} label={x.title} className="frame" /> : null}
+            <Points list={x.points} />
+            {asList(x.tags).length ? <ul className="chips">{asList(x.tags).map((g) => <li key={g}>{g}</li>)}</ul> : null}
+            <ItemLink x={x} light={dark} />
+          </article>
+        ))}
+      </div>
+    );
+  } else if (t === 'text') {
+    body = (
+      <div className="cs-text-wrap">
+        {s.image_key ? <Photo k={s.image_key} label={s.title} className="frame cs-text-img" /> : null}
+        <div className="cs-paras">
+          {items.map((x, i) => (
+            <div key={x.id || i} className="cs-para" data-rise="">
+              {x.title ? <h3>{x.title}</h3> : null}
+              {x.text ? <p className="cs-text">{x.text}</p> : null}
+              <Points list={x.points} />
+              {x.image_key ? <Photo k={x.image_key} label={x.title} className="frame" /> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  } else if (t === 'timeline') {
+    body = (
+      <ol className="timeline cs-timeline">
+        <span className="timeline-line" data-draw="" aria-hidden="true" />
+        {items.map((x, i) => (
+          <li key={x.id || i} data-rise="r" style={{ '--d': Math.min(i, 4) }}>
+            {x.label ? <span className="timeline-label">{x.label}</span> : null}
+            <div>
+              {x.title ? <h3>{x.title}</h3> : null}
+              {x.text ? <p className={`${dark ? 'on-dark-muted' : 'muted'} cs-text`}>{x.text}</p> : null}
+              <Points list={x.points} />
+              {x.image_key ? <Photo k={x.image_key} label={x.title} className="timeline-photo" /> : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    );
+  } else if (t === 'numbers') {
+    body = (
+      <div className={`stats${dark ? '' : ' stats-light'}`}>
+        {items.map((x, i) => (
+          <div key={x.id || i} className="stat" data-rise="" style={{ '--d': i }}>
+            <Gold name={x.icon || 'star'} />
+            <div><b><CountUp value={x.title} /></b><p>{x.text}</p></div>
+          </div>
+        ))}
+      </div>
+    );
+  } else if (t === 'quotes') {
+    body = (
+      <div className={`recs${items.length === 1 ? ' recs-one' : ''}${dark ? '' : ' recs-light'}`}>
+        {items.map((x, i) => (
+          <figure key={x.id || i} className="rec" data-rise="" style={{ '--d': Math.min(i, 3) }}>
+            <Icon name="quote" size={30} />
+            <blockquote>{x.text}</blockquote>
+            {x.title ? <figcaption><span className="avatar" aria-hidden="true">{initials(x.title)}</span><span><b>{x.title}</b>{x.label ? <small>{x.label}</small> : null}</span></figcaption> : null}
+          </figure>
+        ))}
+      </div>
+    );
+  } else if (t === 'cta') {
+    return (
+      <section id={s.id} className="wrap section">
+        <div className="cta-band" data-rise="">
+          <span className="blob blob-a" aria-hidden="true" /><span className="blob blob-b" aria-hidden="true" />
+          <div className="cta-text">
+            {s.eyebrow ? <Eyebrow icon={s.icon || 'star'} light>{s.eyebrow}</Eyebrow> : null}
+            {s.title ? <h2>{s.title}</h2> : null}
+            {s.intro ? <p>{s.intro}</p> : null}
+          </div>
+          <div className="cta-actions">
+            {items.filter((x) => safeHref(x.link)).map((x, i) => (
+              <a key={x.id || i} className={`btn btn-pill ${i === 0 ? 'btn-gold' : 'btn-ghost'}`} href={safeHref(x.link)} target={/^https:/.test(x.link) ? '_blank' : undefined} rel="noopener">{x.title || 'Open'}</a>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+  const inner = <><Head s={s} light={dark} />{body}</>;
+  if (!tone) return <section id={s.id} className="wrap section">{inner}</section>;
+  return <section id={s.id} className={tone}><div className={dark ? 'wrap cs-dark-in' : 'wrap section'}>{inner}</div></section>;
+}
+
+/** One section of the page, in the order set in the page builder. */
+function SectionOf({ s, b, p, go, cvHref }) {
+  switch (s.type) {
+    case 'stats': return <Stats s={b.stats || {}} />;
+    case 'agentic': return <Agentic a={b.agentic || {}} />;
+    case 'principles': return <Principles pr={b.principles || {}} />;
+    case 'work': return <Work w={b.work || {}} />;
+    case 'counter': return <Counter p={p} />;
+    case 'experience': return <Experience e={b.experience || {}} />;
+    case 'skills': return <Skills s={b.skills || {}} />;
+    case 'certifications': return <Certifications c={b.certifications || {}} ed={b.education || {}} />;
+    case 'recommendations': return <Recommendations r={b.recommendations || {}} />;
+    case 'contact': return <Contact c={b.contact || {}} p={p} cvHref={cvHref} go={go} />;
+    case 'custom': return <CustomSection s={s} />;
+    default: return null;
+  }
+}
+
 export const cvLink = (cv, name) => (cv && cv.file_key ? `${fileUrl(cv.file_key)}?download=1&name=${encodeURIComponent(`${String(name || 'CV').replace(/\s+/g, '-')}-CV.pdf`)}` : '');
 
 export default function Site({ site, go, isAdmin }) {
@@ -395,19 +534,10 @@ export default function Site({ site, go, isAdmin }) {
   const cvHref = cvLink(b.cv, p.name);
   return (
     <div className="page">
-      <SiteNav go={go} isAdmin={isAdmin} links={LINKS} name={p.name} />
+      <SiteNav go={go} isAdmin={isAdmin} links={menuLinks(b.layout)} name={p.name} />
       <main>
         <Hero p={p} go={go} cvHref={cvHref} />
-        <Stats s={b.stats || {}} />
-        <Agentic a={b.agentic || {}} />
-        <Principles pr={b.principles || {}} />
-        <Work w={b.work || {}} />
-        <Counter p={p} />
-        <Experience e={b.experience || {}} />
-        <Skills s={b.skills || {}} />
-        <Certifications c={b.certifications || {}} ed={b.education || {}} />
-        <Recommendations r={b.recommendations || {}} />
-        <Contact c={b.contact || {}} p={p} cvHref={cvHref} go={go} />
+        {sectionsOf(b.layout).filter((s) => s.visible !== false).map((s) => <SectionOf key={s.id} s={s} b={b} p={p} go={go} cvHref={cvHref} />)}
       </main>
       <SiteFooter name={p.name} location={p.location} />
     </div>

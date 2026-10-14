@@ -5,7 +5,9 @@ import { hashPassword, verifyPassword, passwordProblem } from '../src/lib.ts';
 import { setupMail } from '../src/email.ts';
 import { cleanJson } from '../src/clean.ts';
 import { asList, monthYear, period, since } from '../web/src/api.js';
-import { fromForm, problem, toForm, SPECS, NAV } from '../web/src/schema.js';
+import { fromForm, problem, toForm, SPECS, NAV, CUSTOM_FIELDS, itemFields } from '../web/src/schema.js';
+import { BUILT_IN, DEFAULT_SECTIONS, STYLES, TEMPLATES, duplicate, menuLinks, newSection, sectionName, sectionsOf } from '../web/src/sections.js';
+import { parseCsv, readExport, monthYearOf, hasRecommendation, hasSkill } from '../web/src/linkedin.js';
 import { content } from '../seed/content.mjs';
 
 test('passwords: a stored hash verifies only the right password', async () => {
@@ -30,7 +32,7 @@ test('cleanJson trims text, keeps plain values and refuses odd shapes', () => {
   assert.equal((cleanJson('y'.repeat(30000)) as string).length, 20000);
   assert.throws(() => cleanJson({ 'bad key': 1 }), /field name/);
   assert.throws(() => cleanJson({ __proto__x: Array.from({ length: 200 }, () => 1) }), /at most/);
-  assert.throws(() => cleanJson({ a: { b: { c: { d: { e: { f: { g: { h: 1 } } } } } } } }), /nested/);
+  assert.throws(() => cleanJson({ a: { b: { c: { d: { e: { f: { g: { h: { i: 1 } } } } } } } } }), /nested/);
   assert.throws(() => cleanJson({ f: () => 1 } as any), /not allowed/);
 });
 
@@ -77,14 +79,75 @@ test('admin forms: links must be https and emails must look like emails', () => 
 });
 
 test('every admin section has an editor, and every list has the fields it shows', () => {
-  for (const n of NAV) {
-    if (['dashboard', 'account', 'cv'].includes(n.id)) continue;
-    assert.ok(SPECS[n.id], `${n.id} has a spec`);
-    for (const l of SPECS[n.id].lists || []) {
-      assert.ok(l.fields.length > 0 && typeof l.title === 'function', `${n.id}.${l.key}`);
-      assert.ok((content as any)[n.id] && Array.isArray((content as any)[n.id][l.key]), `${n.id}.${l.key} has starting content`);
+  const ids = [...NAV.map((n: any) => n.id), ...Object.keys(BUILT_IN)];
+  assert.equal(new Set(ids).size, ids.length, 'page names and section names never clash');
+  const editors: [string, string][] = [
+    ...NAV.filter((n: any) => !['dashboard', 'builder', 'linkedin', 'account', 'cv'].includes(n.id)).map((n: any) => [n.id, n.id] as [string, string]),
+    ...Object.entries(BUILT_IN).map(([type, b]: [string, any]) => [type, (SPECS[type] && SPECS[type].block) || b.block] as [string, string]),
+  ];
+  for (const [id, block] of editors) {
+    assert.ok(SPECS[id], `${id} has an editor`);
+    for (const l of SPECS[id].lists || []) {
+      assert.ok(l.fields.length > 0 && typeof l.title === 'function', `${id}.${l.key}`);
+      assert.ok((content as any)[block] && Array.isArray((content as any)[block][l.key]), `${id}.${l.key} has starting content`);
     }
   }
+});
+
+test('page builder: the saved order is used, missing built-in sections come back hidden, the menu follows the page', () => {
+  assert.deepEqual(sectionsOf(undefined).map((s: any) => s.id), DEFAULT_SECTIONS.map((s) => s.id));
+  assert.deepEqual(sectionsOf(content.layout).map((s: any) => s.id), DEFAULT_SECTIONS.map((s) => s.id));
+  const custom = newSection('timeline');
+  const mine = sectionsOf({ sections: [{ id: 'contact', type: 'contact', visible: true, menu: true, label: 'Talk' }, { ...custom, menu: true, label: 'Story' }, { id: 'x', type: 'unknown' }] });
+  assert.equal(mine[0].id, 'contact');
+  assert.equal(mine[1].id, custom.id);
+  assert.ok(!mine.some((s: any) => s.id === 'x'), 'unknown kinds are ignored');
+  assert.equal(mine.length, 2 + Object.keys(BUILT_IN).length - 1);
+  assert.ok(mine.slice(2).every((s: any) => s.visible === false), 'built-in sections missing from the layout are hidden, not lost');
+  assert.deepEqual(menuLinks({ sections: mine }), [{ to: '/#contact', label: 'Talk' }, { to: `/#${custom.id}`, label: 'Story' }]);
+  assert.equal(menuLinks({ sections: [{ ...mine[0], visible: false }] }).length, 0, 'a hidden section is never in the menu');
+});
+
+test('page builder: new and copied sections are complete, valid and use their own ids', () => {
+  for (const t of Object.keys(TEMPLATES)) {
+    const s = newSection(t);
+    assert.equal(s.template, t);
+    assert.match(s.id, /^c-[a-z0-9]+$/);
+    assert.ok(s.items.length >= 1 && s.items.every((x: any) => x.id.startsWith(`${s.id}-`)), `${t} has starter sub-sections`);
+    assert.doesNotThrow(() => cleanJson({ sections: [s] }), `${t} passes the server's cleaning`);
+    assert.ok(itemFields(TEMPLATES[t]).length > 0, `${t} has sub-section fields`);
+  }
+  const s = newSection('cards');
+  const c = duplicate(s);
+  assert.notEqual(c.id, s.id);
+  assert.ok(c.items.every((x: any, i: number) => x.id !== s.items[i].id && x.title === s.items[i].title));
+  assert.equal(sectionName(c), `${s.title} (copy)`);
+  assert.equal(sectionName({ type: 'skills' }, content), content.skills.title);
+  const fields = CUSTOM_FIELDS(TEMPLATES, STYLES).filter((f: any) => f.key);
+  assert.ok(['template', 'style', 'title', 'intro'].every((k) => fields.some((f: any) => f.key === k)));
+  assert.match(problem(itemFields(TEMPLATES.cta), { title: 'Mail', link: 'javascript:alert(1)' }), /https|mailto/);
+  assert.equal(problem(itemFields(TEMPLATES.cta), { title: 'Mail', link: 'mailto:me@example.com' }), '');
+});
+
+test('LinkedIn export: recommendations, skills with endorsements and certifications are read in the portfolio format', () => {
+  assert.deepEqual(parseCsv('a,"b, c","d ""e"""\r\n1,"multi\nline",3\n'), [['a', 'b, c', 'd "e"'], ['1', 'multi\nline', '3']]);
+  assert.equal(monthYearOf('11/16/13, 6:00 PM'), 'November 2013');
+  assert.equal(monthYearOf('2024-03-02'), 'March 2024');
+  const r = readExport([
+    { name: 'Basic_LinkedInDataExport/Recommendations_Received.csv', text: '﻿First Name,Last Name,Company,Job Title,Text,Creation Date,Status\nAsha,Rao,Acme,CTO,"Moinak is &quot;great&quot;.\nTruly.",09/01/24,VISIBLE\nOld,Note,Beta,PM,Hidden one,01/02/20,HIDDEN\n' },
+    { name: 'Skills.csv', text: 'Name\nSalesforce\nAgentic AI\nSalesforce\n' },
+    { name: 'Endorsement_Received_Info.csv', text: 'Endorsement Date,Skill Name,Endorser First Name\n2024/01/01,Agentic AI,A\n2024/01/02,Agentic AI,B\n' },
+    { name: 'Certifications.csv', text: 'Name,Url,Authority,Started On,Finished On,License Number\nTOGAF 9,http://x.example,The Open Group,Mar 2019,,\n' },
+    { name: 'Connections.csv', text: 'First Name,Last Name\nNot,Imported\n' },
+  ]);
+  assert.deepEqual(r.found, ['Recommendations_Received.csv', 'Skills.csv', 'Endorsement_Received_Info.csv', 'Certifications.csv']);
+  assert.equal(r.recommendations.length, 2);
+  assert.deepEqual(r.recommendations[0], { name: 'Asha Rao', role: 'CTO, Acme', relation: '', date: 'September 2024', text: 'Moinak is "great".\nTruly.', visible: true });
+  assert.equal(r.recommendations[1].visible, false, 'a recommendation hidden on LinkedIn comes in hidden');
+  assert.deepEqual(r.skills, [{ name: 'Agentic AI', endorsements: 2 }, { name: 'Salesforce', endorsements: 0 }]);
+  assert.deepEqual(r.certifications, [{ name: 'TOGAF 9', issuer: 'The Open Group', year: '2019', link: '', icon: 'award' }]);
+  assert.ok(hasRecommendation([{ name: 'asha rao', text: 'Moinak is "great". Truly.' }], r.recommendations[0]), 'the same recommendation is not added twice');
+  assert.ok(hasSkill([{ items: ['agentic ai'] }], 'Agentic AI'));
 });
 
 test('starting content: no MuleSoft claimed as a skill, no private details published', () => {
