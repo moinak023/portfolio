@@ -9,7 +9,13 @@ export function SiteNav({ go, isAdmin, links, name = 'Moinak Ghosh' }) {
     if (open) document.documentElement.setAttribute('data-lock', '1'); else document.documentElement.removeAttribute('data-lock');
     return () => document.documentElement.removeAttribute('data-lock');
   }, [open]);
-  const jump = (to) => (e) => { e.preventDefault(); setOpen(false); go(to); };
+  // From the full-screen menu: unlock the page first, close the menu, then jump straight to the section.
+  const jump = (to, fromMenu = false) => (e) => {
+    e.preventDefault();
+    if (fromMenu) document.documentElement.removeAttribute('data-lock');
+    setOpen(false);
+    go(to, { instant: fromMenu });
+  };
   const linksRef = useRef(null);
   const [compact, setCompact] = useState(false);
   useLayoutEffect(() => {
@@ -49,7 +55,7 @@ export function SiteNav({ go, isAdmin, links, name = 'Moinak Ghosh' }) {
             <button type="button" className="burger burger-light" onClick={() => setOpen(false)} aria-label="Close the menu"><Icon name="close" size={22} /></button>
           </div>
           <nav aria-label="Menu">
-            {all.map((l) => <a key={l.to} className="sheet-item" href={l.to} onClick={jump(l.to)}>{l.label}<Icon name="arrow" size={18} /></a>)}
+            {all.map((l) => <a key={l.to} className="sheet-item" href={l.to} onClick={jump(l.to, true)}>{l.label}<Icon name="arrow" size={18} /></a>)}
           </nav>
         </div>,
         document.body,

@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { api, DEMO } from './api.js';
-import { Toast } from './ui.jsx';
+import { Toast, scrollToSection } from './ui.jsx';
 import Site from './Site.jsx';
 import Cv from './Cv.jsx';
 import { IdleGuard } from './idle.jsx';
@@ -42,18 +42,21 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const go = useCallback((to) => {
+  // go('/#contact') scrolls smoothly; go('/#contact', { instant: true }) jumps straight there (used by the phone menu,
+  // which covers the page, so there is nothing to watch while it scrolls).
+  const go = useCallback((to, opts = {}) => {
     const [p, hash] = to.split('#');
     const target = p || '/';
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const apply = () => {
-      if (target !== pathNow()) { pushPath(target + (hash ? `#${hash}` : '')); setPath(target); }
+      const moved = target !== pathNow();
+      if (moved) { pushPath(target + (hash ? `#${hash}` : '')); setPath(target); }
       else if (hash && !DEMO) window.history.replaceState({}, '', `${target}#${hash}`);
       requestAnimationFrame(() => {
-        const el = hash ? document.getElementById(hash) : null;
-        if (el) el.scrollIntoView(); else window.scrollTo(0, 0);
+        if (hash) scrollToSection(hash, !moved && !opts.instant && !reduce);
+        else window.scrollTo(0, 0);
       });
     };
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (document.startViewTransition && !reduce && target !== pathNow()) document.startViewTransition(apply); else apply();
   }, []);
 

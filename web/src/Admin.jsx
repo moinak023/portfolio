@@ -381,9 +381,10 @@ function Preview({ version, focus }) {
   const scale = Math.min(1, size.w / deviceW);
   const onLoad = () => {
     try {
-      const doc = frame.current && frame.current.contentDocument;
-      const el = focus && doc ? doc.getElementById(focus) : null;
-      if (el) el.scrollIntoView();
+      // Scroll only inside the preview frame (scrollIntoView would also scroll the admin page around it).
+      const win = frame.current && frame.current.contentWindow;
+      const el = focus && win ? win.document.getElementById(focus) : null;
+      if (el) win.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + win.scrollY - 84));
     } catch { /* the preview is on the same site; nothing to do if it is not loaded yet */ }
   };
   return (

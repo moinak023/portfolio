@@ -71,16 +71,56 @@ export function Icon({ name, size = 18 }) {
   );
 }
 
-/** Marks [data-rise] and similar elements as seen when they scroll into view, for browsers without scroll-driven animations. */
+/**
+ * Scrolls the page so the section sits just below the sticky header.
+ * The position is worked out in code and only this page scrolls (scrollIntoView would also scroll a page that
+ * shows the portfolio in a frame). Once the scroll settles, the position is checked again and corrected, in case
+ * anything above changed height on the way. A touch, wheel or key press by the visitor stops the correction.
+ */
+export function scrollToSection(id, smooth = false) {
+  let tries = 0;
+  const run = () => {
+    const el = document.getElementById(id);
+    if (!el) { if (tries < 30) { tries += 1; requestAnimationFrame(run); } return; }
+    const nav = document.querySelector('.nav');
+    const offset = nav ? nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) : 0;
+    const want = () => Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY - offset));
+    window.scrollTo({ top: want(), behavior: smooth ? 'smooth' : 'auto' });
+    let stopped = false;
+    const stop = () => { stopped = true; };
+    const events = ['touchstart', 'wheel', 'keydown'];
+    events.forEach((n) => window.addEventListener(n, stop, { once: true, passive: true }));
+    const fix = () => { if (!stopped && Math.abs(window.scrollY - want()) > 2) window.scrollTo({ top: want(), behavior: 'auto' }); };
+    if (smooth && 'onscrollend' in window) window.addEventListener('scrollend', fix, { once: true });
+    (smooth ? [1500] : [80, 450]).forEach((ms) => setTimeout(fix, ms));
+    setTimeout(() => events.forEach((n) => window.removeEventListener(n, stop)), 2000);
+  };
+  run();
+}
+
+/**
+ * Marks [data-rise] and similar elements as seen the first time they come into view, which plays their entrance once.
+ * On phones this is the only thing that makes them visible, so elements added later (a saved change, a new section)
+ * are picked up too, and without IntersectionObserver everything is simply shown.
+ */
+const REVEAL = '[data-rise]:not([data-seen]),[data-mask]:not([data-seen]),[data-draw]:not([data-seen])';
 export function useReveal(dep) {
   useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') return undefined;
-    const els = Array.from(document.querySelectorAll('[data-rise]:not([data-seen]),[data-mask]:not([data-seen]),[data-draw]:not([data-seen])'));
+    if (typeof IntersectionObserver === 'undefined') {
+      document.querySelectorAll(REVEAL).forEach((el) => el.setAttribute('data-seen', ''));
+      return undefined;
+    }
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.setAttribute('data-seen', ''); io.unobserve(e.target); } });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
+    const watch = (root) => {
+      if (root.matches && root.matches(REVEAL)) io.observe(root);
+      if (root.querySelectorAll) root.querySelectorAll(REVEAL).forEach((el) => io.observe(el));
+    };
+    watch(document);
+    const mo = new MutationObserver((list) => list.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) watch(n); })));
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo.disconnect(); };
   }, [dep]);
 }
 

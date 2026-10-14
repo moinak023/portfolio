@@ -39,7 +39,8 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 84px; overflow-x: clip; }
+/* No CSS smooth scrolling: jumps to a section are done in code (ui.jsx scrollToSection), smooth only where it helps. */
+html { scroll-padding-top: 84px; overflow-x: clip; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; text-wrap: pretty; overflow-x: clip; }
 img { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -52,39 +53,43 @@ h1, h2, h3, p { margin: 0; }
 html[data-lock="1"], html[data-lock="1"] body { overflow: hidden; }
 .num { font-variant-numeric: tabular-nums; }
 
-/* ---------- motion ---------- */
-@keyframes rise { from { opacity: 0; filter: blur(10px); transform: translate3d(0, 48px, 0) scale(.985); } to { opacity: 1; filter: blur(0); transform: none; } }
-@keyframes riseL { from { opacity: 0; filter: blur(10px); transform: translate3d(-46px, 24px, 0); } to { opacity: 1; filter: blur(0); transform: none; } }
-@keyframes riseR { from { opacity: 0; filter: blur(10px); transform: translate3d(46px, 24px, 0); } to { opacity: 1; filter: blur(0); transform: none; } }
+/* ---------- motion ----------
+   Only opacity and position animate (no blur), so the graphics chip does the work and scrolling stays smooth.
+   Phones and tablets: each element rises in once, the first time it comes into view (useReveal in ui.jsx).
+   Computers with a mouse: the same movement follows the scroll position, as on the family site. */
+@keyframes rise { from { opacity: 0; transform: translate3d(0, 40px, 0) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes riseL { from { opacity: 0; transform: translate3d(-40px, 20px, 0); } to { opacity: 1; transform: none; } }
+@keyframes riseR { from { opacity: 0; transform: translate3d(40px, 20px, 0); } to { opacity: 1; transform: none; } }
 @keyframes maskIn { from { clip-path: inset(0 0 100% 0); opacity: .35; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
 @keyframes zoomPan { from { transform: scale(1.22) translate3d(0, -2%, 0); } to { transform: scale(1.03) translate3d(0, 2.5%, 0); } }
 @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes wordUp { from { opacity: 0; transform: translate3d(0, .7em, 0); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
-@keyframes viewIn { from { opacity: 0; filter: blur(8px); transform: translate3d(0, 18px, 0); } to { opacity: 1; filter: none; transform: none; } }
+@keyframes wordUp { from { opacity: 0; transform: translate3d(0, .7em, 0); } to { opacity: 1; transform: none; } }
+@keyframes viewIn { from { opacity: 0; transform: translate3d(0, 18px, 0); } to { opacity: 1; transform: none; } }
 @keyframes pop { from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(8px, -14px, 0); } }
 @keyframes drawerIn { from { transform: translate3d(40px, 0, 0); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes toastUp { from { opacity: 0; transform: translate3d(-50%, 20px, 0); } to { opacity: 1; transform: translate3d(-50%, 0, 0); } }
 @keyframes pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 
-[data-rise] { animation: rise linear both; animation-timeline: view(); animation-range: entry calc(4% + var(--d, 0) * 6%) entry calc(70% + var(--d, 0) * 6%); }
-[data-rise="l"] { animation-name: riseL; }
-[data-rise="r"] { animation-name: riseR; }
-[data-mask] { animation: maskIn linear both; animation-timeline: view(); animation-range: entry 6% entry 80%; }
-[data-zoom] { animation: zoomPan linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
-[data-draw] { transform-origin: top; animation: draw linear both; animation-timeline: view(); animation-range: entry 10% cover 60%; }
-#scroll-progress { position: fixed; z-index: 90; left: 0; top: 0; width: 100%; height: 3px; background: var(--grad-line); transform-origin: left; animation: grow linear both; animation-timeline: scroll(root); }
-@supports not (animation-timeline: view()) {
-  [data-rise], [data-mask] { opacity: 0; }
-  [data-rise][data-seen] { animation: rise .9s var(--ease) both; animation-delay: calc(var(--d, 0) * .07s); }
-  [data-rise="l"][data-seen] { animation-name: riseL; }
-  [data-rise="r"][data-seen] { animation-name: riseR; }
-  [data-mask][data-seen] { animation: maskIn 1s var(--ease) both; }
-  [data-draw] { transform: scaleY(0); animation: none; }
-  [data-draw][data-seen] { animation: draw 1.6s var(--ease) both; }
-  [data-zoom] { animation: none; }
-  #scroll-progress { display: none; }
+[data-rise], [data-mask] { opacity: 0; }
+[data-rise][data-seen] { opacity: 1; animation: rise .7s var(--ease) both; animation-delay: calc(var(--d, 0) * .06s); }
+[data-rise="l"][data-seen] { animation-name: riseL; }
+[data-rise="r"][data-seen] { animation-name: riseR; }
+[data-mask][data-seen] { opacity: 1; animation: maskIn .8s var(--ease) both; }
+[data-draw] { transform-origin: top; transform: scaleY(0); }
+[data-draw][data-seen] { animation: draw 1.4s var(--ease) both; }
+#scroll-progress { position: fixed; z-index: 90; left: 0; top: 0; width: 100%; height: 3px; background: var(--grad-line); transform-origin: left; display: none; }
+@supports (animation-timeline: view()) {
+  #scroll-progress { display: block; animation: grow linear both; animation-timeline: scroll(root); }
+  @media (hover: hover) and (pointer: fine) and (min-width: 861px) {
+    [data-rise], [data-rise][data-seen] { opacity: 1; animation: rise linear both; animation-timeline: view(); animation-range: entry calc(4% + var(--d, 0) * 6%) entry calc(70% + var(--d, 0) * 6%); }
+    [data-rise="l"], [data-rise="l"][data-seen] { animation-name: riseL; }
+    [data-rise="r"], [data-rise="r"][data-seen] { animation-name: riseR; }
+    [data-mask], [data-mask][data-seen] { opacity: 1; animation: maskIn linear both; animation-timeline: view(); animation-range: entry 6% entry 80%; }
+    [data-zoom] { animation: zoomPan linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    [data-draw], [data-draw][data-seen] { transform: none; animation: draw linear both; animation-timeline: view(); animation-range: entry 10% cover 60%; }
+  }
 }
 .word { display: inline-block; animation: wordUp .8s var(--ease) both; animation-delay: calc(.12s + var(--i, 0) * .07s); }
 .rise-in { animation: wordUp .9s var(--ease) both; animation-delay: calc(.12s + var(--i, 0) * .07s); }
@@ -177,6 +182,7 @@ html[data-lock="1"], html[data-lock="1"] body { overflow: hidden; }
 /* ---------- navigation and footer ---------- */
 .nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: 16px 32px; padding: 18px max(24px, calc((100vw - 1280px) / 2)); background: rgba(251, 247, 241, .92); backdrop-filter: blur(14px); border-bottom: 1px solid transparent; transition: border-color .3s; }
 .nav { border-bottom-color: #E0D6C7; }
+
 .nav-mivan { background: rgba(251, 247, 241, .92); }
 .brand { font-size: 17px; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
 .brand i { font-style: normal; color: var(--accent-soft); }
@@ -540,8 +546,8 @@ textarea[data-field] { resize: vertical; line-height: 1.6; }
 .eco-title { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-ink); }
 .eco-stack { position: relative; display: grid; gap: 14px; }
 .eco-spine { position: absolute; left: 20px; top: 20px; bottom: 20px; width: 2px; background: var(--grad-line); overflow: hidden; }
-.eco-spine i { position: absolute; left: -3px; width: 8px; height: 60px; border-radius: 4px; background: linear-gradient(180deg, transparent, #E8D3A2, transparent); animation: flowDown 3.2s linear infinite; }
-@keyframes flowDown { from { top: -60px; } to { top: 100%; } }
+.eco-spine i { position: absolute; left: -3px; top: 0; width: 8px; height: 100%; background: linear-gradient(180deg, transparent 0, #E8D3A2 30px, transparent 60px); animation: flowDown 3.2s linear infinite; }
+@keyframes flowDown { from { transform: translate3d(0, -60px, 0); } to { transform: translate3d(0, 100%, 0); } }
 .eco-layer { position: relative; display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 14px 28px; align-items: center; padding: 16px 18px 16px 0; background: #fff; border: 1px solid #E8DFD1; box-shadow: 0 18px 34px -32px rgba(6, 48, 63, .6); transition: border-color .35s, transform .45s var(--ease); }
 .eco-layer:hover { border-color: var(--gold); transform: translateX(4px); }
 .eco-name { display: flex; align-items: center; gap: 14px; padding-left: 0; font-weight: 700; font-size: 16px; line-height: 1.3; }
@@ -861,4 +867,13 @@ a.cert:hover { color: var(--ink); }
   .a-drop { padding: 24px 14px; }
   .a-grip { width: 36px; }
   .a-row .a-grip ~ .a-row-tools { margin-left: auto; }
+}
+
+/* Phones and tablets (kept at the end so it wins over the rules above): no live blur behind the header, headings rise in like everything else (a clip effect repaints
+   every frame), and the endless decorative movements stop, so the phone only works while something changes. */
+@media (hover: none), (pointer: coarse) {
+  .nav { background: rgba(251, 247, 241, .98); backdrop-filter: none; }
+  [data-rise][data-seen], [data-mask][data-seen] { animation-duration: .55s; }
+  [data-mask][data-seen] { animation-name: rise; }
+  .blob, .mono-ring, .status[data-tone="live"] i { animation: none; }
 }

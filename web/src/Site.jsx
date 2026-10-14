@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { asList, fileUrl, period, since } from './api.js';
-import { CountUp, Eyebrow, Gold, Icon, Photo, Words, initials, safeHref, useReveal } from './ui.jsx';
+import { CountUp, Eyebrow, Gold, Icon, Photo, Words, initials, safeHref, scrollToSection, useReveal } from './ui.jsx';
 import { SiteNav, SiteFooter } from './Chrome.jsx';
 import { menuLinks, sectionsOf } from './sections.js';
 
@@ -529,7 +529,7 @@ export default function Site({ site, go, isAdmin }) {
   useEffect(() => {
     // Opening a link like /#agentic lands on that section once the page has drawn.
     const id = window.location.hash.slice(1);
-    if (id) requestAnimationFrame(() => { const el = document.getElementById(id); if (el) el.scrollIntoView(); });
+    if (id) requestAnimationFrame(() => scrollToSection(id));
   }, []);
   const cvHref = cvLink(b.cv, p.name);
   return (

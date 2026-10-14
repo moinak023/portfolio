@@ -165,14 +165,34 @@ async function run(kind) {
     await shot(page, `${kind}-menu`);
     await page.click('.sheet-item:has-text("Skills")');
     await page.waitForTimeout(800);
-    const top = await page.$eval('#skills', (el) => el.getBoundingClientRect().top);
-    check(!(await page.$('.sheet')) && top < 300 && top > -50, P(`menu link closes the menu and goes to Skills (top ${Math.round(top)})`));
+    check(!(await page.$('.sheet')) && !(await page.evaluate(() => document.documentElement.hasAttribute('data-lock'))), P('a menu link closes the menu and unlocks the page'));
+    // Every menu item, in an order that jumps both down and up the page, must put its section right under the header.
+    const navH = await page.$eval('.nav', (n) => n.offsetHeight);
+    const items = await page.evaluate(() => [...document.querySelectorAll('.nav-links a[href^="/#"]')].map((a) => a.getAttribute('href').slice(2)));
+    for (const id of [...items.slice().reverse(), ...items]) {
+      await page.click('.burger');
+      await page.waitForSelector('.sheet');
+      await page.click(`.sheet-item[href="/#${id}"]`);
+      await page.waitForTimeout(500);
+      const t1 = await page.$eval(`#${id}`, (el) => Math.round(el.getBoundingClientRect().top));
+      await page.waitForTimeout(700);
+      const t2 = await page.$eval(`#${id}`, (el) => Math.round(el.getBoundingClientRect().top));
+      check(Math.abs(t1 - navH) <= 2 && t1 === t2, P(`menu item ${id} lands right under the header and stays (${t1}, ${t2}, header ${navH})`));
+    }
+    const endless = await page.evaluate(() => document.getAnimations().filter((x) => x.effect && x.effect.getComputedTiming().iterations === Infinity).length);
+    check(endless === 0, P(`no endless decorative animations run on the phone (${endless})`));
   } else {
-    await page.click('.nav-links a:has-text("Experience")');
-    await page.waitForTimeout(800);
-    const top = await page.$eval('#experience', (el) => el.getBoundingClientRect().top);
-    check(top < 200 && top > -50, P(`navigation link goes to Experience (top ${Math.round(top)})`));
+    const navH = await page.$eval('.nav', (n) => n.offsetHeight);
+    for (const id of ['contact', 'experience', 'agentic']) {
+      await page.click(`.nav-links a[href="/#${id}"]`);
+      await page.waitForTimeout(2200);
+      const top = await page.$eval(`#${id}`, (el) => Math.round(el.getBoundingClientRect().top));
+      const atEnd = await page.evaluate(() => Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2);
+      check(Math.abs(top - navH) <= 2 || atEnd, P(`navigation link to ${id} scrolls smoothly to right under the header, or to the end of the page (top ${top}, header ${navH})`));
+    }
   }
+  const blurred = await page.evaluate(() => [...document.styleSheets].flatMap((sh) => { try { return [...sh.cssRules]; } catch { return []; } }).filter((r) => r.type === CSSRule.KEYFRAMES_RULE && /blur/.test(r.cssText)).map((r) => r.name));
+  check(blurred.length === 0, P(`no animation blurs content while it moves (${blurred.join(', ')})`));
 
   // ---------- CV page ----------
   await page.goto(`${BASE}/cv`, { waitUntil: 'networkidle' });
