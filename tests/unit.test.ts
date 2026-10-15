@@ -157,14 +157,9 @@ test('starting content: no MuleSoft claimed as a skill, no private details publi
   assert.equal(content.profile.show_phone, false);
 });
 
-test('addresses: the main domain and www move to profile.moinakghosh.com, keeping the path; other addresses stay', () => {
-  const host = 'profile.moinakghosh.com';
-  for (const from of ['https://moinakghosh.com/cv?x=1', 'https://www.moinakghosh.com/cv?x=1', 'http://www.profile.moinakghosh.com/cv?x=1']) {
-    assert.equal(redirectTarget(from, host), 'https://profile.moinakghosh.com/cv?x=1', from);
+test('addresses: www. moves to the same address without it; everything else is served as it is', () => {
+  assert.equal(redirectTarget('http://www.profile.moinakghosh.com/cv?x=1'), 'http://profile.moinakghosh.com/cv?x=1');
+  for (const u of ['https://profile.moinakghosh.com/admin', 'http://127.0.0.1:8787/api/health', 'https://portfolio.recap-ai.workers.dev/']) {
+    assert.equal(redirectTarget(u), '', u);
   }
-  assert.equal(redirectTarget('https://profile.moinakghosh.com/admin', host), '', 'the site itself is served');
-  assert.equal(redirectTarget('https://family.moinakghosh.com/', host), '', 'other sites on the domain are never redirected here');
-  assert.equal(redirectTarget('http://127.0.0.1:8787/api/health', host), '', 'local testing is served');
-  assert.equal(redirectTarget('https://portfolio.recap-ai.workers.dev/', host), '', 'the workers.dev address is served');
-  assert.equal(redirectTarget('https://www.example.test/a', ''), 'https://example.test/a', 'without SITE_HOST, www is still dropped');
 });

@@ -1,6 +1,6 @@
 # Moinak Ghosh — professional portfolio
 
-A public portfolio at **profile.moinakghosh.com**, with an admin console at **profile.moinakghosh.com/admin** that only the owner can sign in to. moinakghosh.com and www.moinakghosh.com send visitors to profile.moinakghosh.com.
+A public portfolio at **profile.moinakghosh.com**, with an admin console at **profile.moinakghosh.com/admin** that only the owner can sign in to. moinakghosh.com itself is kept for a separate personal site.
 
 - **Portfolio**: the opening, key numbers, the agent ecosystem (diagram and projects), how I work, architecture case studies, a live career counter, experience, skills, certifications, education, recommendations and contact.
 - **CV page** (`/cv`): built from the same content, always up to date, and saved as a PDF with the browser's print dialogue. If a designed CV PDF is uploaded in the admin, the Download CV buttons give that file instead.
@@ -29,7 +29,7 @@ npm run dev                        # http://localhost:8787
 1. `wrangler.jsonc` already names the `portfolio` D1 database and the `portfolio-files` R2 bucket.
 2. In Workers & Pages, import this repository. Build command: `npm run build`. Deploy command: `npx wrangler d1 migrations apply DB --remote && npx wrangler deploy`.
 3. In the Worker's Settings → Variables and Secrets, add the secret `RESEND_API_KEY` (a Resend API key; moinakghosh.com is already verified there).
-4. The routes in `wrangler.jsonc` attach `profile.moinakghosh.com` (the site, `SITE_HOST`) and `moinakghosh.com` and `www.moinakghosh.com` (both redirect to the site).
+4. The route in `wrangler.jsonc` attaches `profile.moinakghosh.com` only. Do not add `moinakghosh.com` or `www.moinakghosh.com` here: they belong to the personal site.
 
 ## Change the starting content
 

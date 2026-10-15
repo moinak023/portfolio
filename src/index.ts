@@ -7,10 +7,9 @@ import { err, redirectTarget } from './lib';
 
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-// One address for search engines and links: moinakghosh.com, www.moinakghosh.com and www.profile.moinakghosh.com
-// move permanently to SITE_HOST (profile.moinakghosh.com), keeping the path (see redirectTarget in lib.ts).
+// A www. address moves to the same address without www., keeping the path (see redirectTarget in lib.ts).
 app.use('*', async (c, next) => {
-  const to = redirectTarget(c.req.url, c.env.SITE_HOST);
+  const to = redirectTarget(c.req.url);
   if (to) return c.redirect(to, 301);
   await next();
 });

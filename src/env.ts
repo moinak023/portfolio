@@ -8,7 +8,6 @@ export interface Env {
   ASSETS: Fetcher;
   EMAIL?: SendEmailBinding;
   SITE_NAME: string;
-  SITE_HOST?: string;
   MAIL_FROM: string;
   MAIL_FROM_NAME: string;
   DEV_OTP: string;

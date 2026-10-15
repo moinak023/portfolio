@@ -69,23 +69,10 @@ export function passwordProblem(password: string, email = ''): string {
   return '';
 }
 
-/**
- * Where a request should be sent instead, or '' to serve it. moinakghosh.com, www.moinakghosh.com and
- * www.profile.moinakghosh.com move to the site's one address (siteHost), keeping the path and query.
- * Any other www. address loses the www. Other addresses (local testing, workers.dev, other subdomains) are served.
- */
-export function redirectTarget(requestUrl: string, siteHost = ''): string {
+/** Where a request should be sent instead, or '' to serve it: a www. address moves to the same address without www. */
+export function redirectTarget(requestUrl: string): string {
   const url = new URL(requestUrl);
-  const parent = siteHost ? siteHost.split('.').slice(1).join('.') : '';
-  if (siteHost && url.hostname !== siteHost && [parent, `www.${parent}`, `www.${siteHost}`].includes(url.hostname)) {
-    url.hostname = siteHost;
-    url.protocol = 'https:';
-    url.port = '';
-    return url.toString();
-  }
-  if (url.hostname.startsWith('www.')) {
-    url.hostname = url.hostname.slice(4);
-    return url.toString();
-  }
-  return '';
+  if (!url.hostname.startsWith('www.')) return '';
+  url.hostname = url.hostname.slice(4);
+  return url.toString();
 }
