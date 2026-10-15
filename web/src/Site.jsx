@@ -539,7 +539,7 @@ export default function Site({ site, go, isAdmin }) {
         <Hero p={p} go={go} cvHref={cvHref} />
         {sectionsOf(b.layout).filter((s) => s.visible !== false).map((s) => <SectionOf key={s.id} s={s} b={b} p={p} go={go} cvHref={cvHref} />)}
       </main>
-      <SiteFooter name={p.name} location={p.location} />
+      <SiteFooter name={p.name} location={p.location} go={go} />
     </div>
   );
 }

@@ -209,6 +209,8 @@ html[data-lock="1"], html[data-lock="1"] body { overflow: hidden; }
 .sheet-item:hover { color: var(--sky); }
 .footer { border-top: 1px solid var(--line); }
 .footer-in { display: flex; flex-wrap: wrap; gap: 10px 32px; justify-content: space-between; padding-block: 30px calc(30px + env(safe-area-inset-bottom, 0px)); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.footer-admin { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); }
+.footer-admin:hover { color: var(--ink); }
 .footer-mivan { border-top: 1px solid rgba(6, 48, 63, .12); }
 
 /* ---------- sign-in ---------- */

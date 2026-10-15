@@ -64,12 +64,13 @@ export function SiteNav({ go, isAdmin, links, name = 'Moinak Ghosh' }) {
   );
 }
 
-export function SiteFooter({ name, location }) {
+export function SiteFooter({ name, location, go }) {
   return (
     <footer className="footer">
       <div className="wrap footer-in">
         <span>© {new Date().getFullYear()} {name}{location ? ` · ${location}` : ''}</span>
         <span>Designed and built with AI agents, on Cloudflare.</span>
+        {go ? <a className="footer-admin" href="/admin" onClick={(e) => { e.preventDefault(); go('/admin'); }}><Icon name="lock" size={13} />Admin sign-in</a> : null}
       </div>
     </footer>
   );

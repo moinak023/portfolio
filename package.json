@@ -16,7 +16,8 @@
     "test:unit": "node --experimental-strip-types --no-warnings --test tests/unit.test.ts",
     "test:reset": "wrangler d1 execute DB --local --file tests/reset-local.sql && wrangler d1 execute DB --local --file migrations/0001_init.sql && wrangler d1 execute DB --local --file migrations/0002_content.sql && wrangler d1 execute DB --local --file migrations/0003_layout.sql",
     "test:api": "node --test tests/api.test.mjs",
-    "test:e2e": "node tests/e2e.mjs"
+    "test:e2e": "node tests/e2e.mjs",
+    "test:preview": "node tests/preview.mjs"
   },
   "dependencies": {
     "hono": "^4.13.13"

@@ -25,7 +25,8 @@ export default function Login({ onDone, notice = '', go }) {
     setBusy(false);
   };
   const reset = () => { setStep('email'); setCode(''); setPassword(''); setPassword2(''); setSetupSent(false); setNote(''); setError(''); };
-  const devNote = (r) => (r.devCode ? ` Development code: ${r.devCode}` : '');
+  // Local testing shows the code on screen; so does the preview copy, which cannot send email.
+  const devNote = (r) => (r.devCode ? (DEMO ? ` Your code is ${r.devCode}.` : ` Development code: ${r.devCode}`) : '');
 
   const request = run(async () => {
     const r = await api('/api/auth/request', { body: { email } });
@@ -62,6 +63,7 @@ export default function Login({ onDone, notice = '', go }) {
         <Eyebrow icon="key">Admin sign-in</Eyebrow>
         <h2>Enter your email address</h2>
         <p className="muted">The admin console is only for the owner of this portfolio.</p>
+        {DEMO ? <p className="login-notice" role="status"><Gold name="eye" size="sm" />This is the preview copy. Sign-in works like the real site, but no email is sent: when you ask for a code, it is shown on screen. Your password lasts until the preview is reloaded.</p> : null}
         <label className="field">
           <span>Email address</span>
           <input id="login-email" type="email" inputMode="email" autoComplete="email" autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
@@ -86,7 +88,6 @@ export default function Login({ onDone, notice = '', go }) {
         <Eyebrow icon="lock">Welcome back</Eyebrow>
         <h2>Enter your password</h2>
         <p className="muted">Signing in as <b>{email}</b>.</p>
-        {DEMO ? <p className="login-notice" role="status"><Gold name="eye" size="sm" />This is the preview copy. Any password opens the admin console here.</p> : null}
         {pw('login-password', password, setPassword, 'Password', 'current-password')}
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="btn btn-solid btn-wide" type="submit" disabled={busy || !password}>{busy ? 'Signing you in' : 'Sign in'}</button>

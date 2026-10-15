@@ -213,7 +213,10 @@ async function run(kind) {
   check(page.url() === `${BASE}/`, P('Back to the portfolio returns home'));
 
   // ---------- admin ----------
-  await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await page.locator('.footer-admin').scrollIntoViewIfNeeded();
+  await page.click('.footer-admin');
+  check(!!(await page.waitForSelector('#login-email', { timeout: 5000 }).catch(() => null)), P('the footer link opens the admin sign-in page'));
   await page.fill('#login-email', 'someone@example.test');
   await page.click('button[type=submit]');
   check(!!(await page.waitForSelector('text=This sign-in is only for the owner', { timeout: 5000 }).catch(() => null)), P('other addresses cannot sign in'));
