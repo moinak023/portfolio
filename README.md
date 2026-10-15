@@ -4,7 +4,9 @@ A public portfolio at **moinakghosh.com**, with an admin console at **moinakghos
 
 - **Portfolio**: the opening, key numbers, the agent ecosystem (diagram and projects), how I work, architecture case studies, a live career counter, experience, skills, certifications, education, recommendations and contact.
 - **CV page** (`/cv`): built from the same content, always up to date, and saved as a PDF with the browser's print dialogue. If a designed CV PDF is uploaded in the admin, the Download CV buttons give that file instead.
-- **Admin** (`/admin`): every section is editable. Lists can be added to, edited, reordered and removed. Every save keeps the version before it (last 25 per section), so any change can be undone. Photographs and the CV PDF are uploaded from the admin.
+- **Admin** (`/admin`, also linked as "Admin sign-in" in the footer): every section is editable. Lists can be added to, edited, dragged into a new order and removed. Every save keeps the version before it (last 25 per section), so any change can be undone. Photographs and the CV PDF are uploaded from the admin.
+- **Page builder**: drag sections into a new order (mouse, finger or arrow keys), show or hide them, put them in the top menu, and add sections of your own (cards, text, timeline, numbers, quotes, call to action) with sub-sections, with a live preview beside the list.
+- **Import from LinkedIn**: upload the ZIP that LinkedIn's "Get a copy of your data" gives you; recommendations, skills and certifications come in without duplicates.
 - **Link previews and search**: the Worker fills in the page title, description, Open Graph preview (`/og.png`) and schema.org Person data from the saved content, and serves `robots.txt` and `sitemap.xml`.
 
 Same design system and stack as the family site: one Cloudflare Worker (Hono) serving a React app, a D1 database for content, and an R2 bucket for photographs and the CV.
@@ -42,6 +44,7 @@ npm run test:unit                                     # helpers, content cleanin
 npm run test:reset                                    # puts the LOCAL database back to its starting content
 BASE=http://127.0.0.1:8787 npm run test:api           # every API route, signed in and signed out
 BASE=http://127.0.0.1:8787 npm run test:e2e           # real browser, desktop and phone, every admin function
+VITE_DEMO=1 npx vite build web && node scripts/make-preview.mjs && npm run test:preview   # the self-contained preview copy
 ```
 
 The API and browser tests refuse to run against anything other than a local address, and undo every change they make.
