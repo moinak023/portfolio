@@ -6,12 +6,15 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
 
-  // The portfolio's address. Cloudflare creates the DNS record and the certificate for it.
+  // The portfolio lives at profile.moinakghosh.com (SITE_HOST below). moinakghosh.com and www.moinakghosh.com are
+  // attached too, only so that anyone who types them is sent to profile.moinakghosh.com. Cloudflare creates the DNS
+  // records and certificates for all three.
   "routes": [
+    { "pattern": "profile.moinakghosh.com", "custom_domain": true },
     { "pattern": "moinakghosh.com", "custom_domain": true },
     { "pattern": "www.moinakghosh.com", "custom_domain": true }
   ],
-  // Keep the workers.dev address until moinakghosh.com is confirmed working, then set this to false.
+  // Keep the workers.dev address until profile.moinakghosh.com is confirmed working, then set this to false.
   "workers_dev": true,
   "preview_urls": false,
 
@@ -38,6 +41,8 @@
 
   "vars": {
     "SITE_NAME": "Moinak Ghosh",
+    // The one address of the portfolio. moinakghosh.com, www.moinakghosh.com and www.profile.moinakghosh.com move here.
+    "SITE_HOST": "profile.moinakghosh.com",
     // Sender of the admin password code. moinakghosh.com is already verified in Resend for the family site.
     "MAIL_FROM": "portfolio@moinakghosh.com",
     "MAIL_FROM_NAME": "Moinak Ghosh · Portfolio",

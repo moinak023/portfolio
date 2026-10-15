@@ -17,7 +17,7 @@ export default function Cv({ site, go }) {
   const certs = ((b.certifications || {}).items || []).filter((x) => x.name);
   const edu = ((b.education || {}).items || []).filter((x) => x.degree);
   const langs = ((b.education || {}).languages || []).filter((x) => x.name);
-  const site_url = DEMO ? 'moinakghosh.com' : window.location.origin.replace(/^https?:\/\//, '');
+  const site_url = DEMO ? 'profile.moinakghosh.com' : window.location.origin.replace(/^https?:\/\//, '');
   const linkedin = safeHref(p.linkedin);
   const designed = cvLink(b.cv, p.name);
 

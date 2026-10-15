@@ -3,17 +3,15 @@ import type { Env, Vars } from './env';
 import { authRoutes } from './auth';
 import { contentRoutes } from './content';
 import { renderPage, robots, sitemap } from './seo';
-import { err } from './lib';
+import { err, redirectTarget } from './lib';
 
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-// www.moinakghosh.com always moves to moinakghosh.com, so there is one address for search engines and links.
+// One address for search engines and links: moinakghosh.com, www.moinakghosh.com and www.profile.moinakghosh.com
+// move permanently to SITE_HOST (profile.moinakghosh.com), keeping the path (see redirectTarget in lib.ts).
 app.use('*', async (c, next) => {
-  const url = new URL(c.req.url);
-  if (url.hostname.startsWith('www.')) {
-    url.hostname = url.hostname.slice(4);
-    return c.redirect(url.toString(), 301);
-  }
+  const to = redirectTarget(c.req.url, c.env.SITE_HOST);
+  if (to) return c.redirect(to, 301);
   await next();
 });
 
